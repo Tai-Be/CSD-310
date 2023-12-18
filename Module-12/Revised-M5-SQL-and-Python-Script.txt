@@ -1,0 +1,184 @@
+-- Creating the Tables
+
+CREATE TABLE Employee (
+    Employee_ID INT,
+    FirstName VARCHAR(200),
+    LastName VARCHAR(200),
+    Role VARCHAR(200),
+    Responsibilities TEXT,
+    Licensing VARCHAR(200)
+);
+
+CREATE TABLE Client (
+    Client_ID INT,
+    FirstName VARCHAR(200),
+    LastName VARCHAR(200),
+    Asset_ID INT,
+    JoinedDate DATE
+);
+
+CREATE TABLE Asset (
+    Asset_ID INT,
+    Client_ID INT,
+    AssetType VARCHAR(200),
+    Value INT,
+    PurchaseDate DATE
+);
+
+CREATE TABLE Transaction (
+    Transaction_Number INT,
+    Client_ID INT,
+    Employee_ID INT,
+    Date DATE,
+    Amount INT,
+    Asset_ID INT
+);
+
+CREATE TABLE BillingProcess (
+    Billing_ID INT,
+    Client_ID INT,
+    Employee_ID INT,
+    Transaction_Number INT
+);
+
+
+-- Inserting the Data into the tables
+
+INSERT INTO employee (Employee_ID, FirstName, LastName, Role, Responsibilities, Licensing)
+VALUES
+(91622, 'Jake', 'Willson', 'Financial Advisor', 'Portfolio Management, Investment Analysis', 'CFA'),
+(42460, 'Ned', 'Willson', 'Financial Advisor', 'Portfolio Management, Investment Analysis', 'CFA, MBA'),
+(68334, 'Phoenix', 'Two Star', 'Compliance Manager', 'Regulatory Compliance, SEC Reporting', NULL),
+(67625, 'June', 'Santos', 'Officer Administrator', 'Client Appointment Scheduling, Office Supplies', NULL);
+
+INSERT INTO client (Client_ID, FirstName, LastName, Asset_ID, JoinedDate)
+VALUES
+(276077, 'Dianna', 'Harding', 234, '2023-12-01'),
+(683684, 'Lucy', 'Nunez', 346, '2023-11-15'),
+(152833, 'Lamont', 'Holden', 568, '2023-11-10'),
+(169020, 'Lynn', 'Maynard', 345, '2023-10-16'),
+(842498, 'Robyn', 'Carr', 478, '2023-10-20'),
+(824023, 'Susana', 'Delacruz', 235, '2023-09-12'),
+(531523, 'Margery', 'Manning', 689, '2023-08-18'),
+(727493, 'Victoria', 'English', 674, '2023-07-23'),
+(640932, 'Bianca', 'Kane', 912, '2023-06-11'),
+(121384, 'Lindsay', 'Mueller', 134, '2023-06-01');
+
+INSERT INTO asset (Asset_ID, Client_ID, AssetType, Value, PurchaseDate)
+VALUES
+(234, 276077, 'Stocks', 5000, '2023-12-15'),
+(346, 683684, 'Real Estate', 15000, '2023-11-20'),
+(568, 152833, 'Bonds', 7500, '2023-11-30'),
+(345, 169020, '401K', 8000, '2023-11-01'),
+(478, 842498, 'Savings Account', 3000, '2023-10-25'),
+(235, 824023, 'Gold', 2500, '2023-09-14'),
+(689, 531523, 'Cryptocurrency', 5000, '2023-10-11'),
+(674, 727493, 'Government Bonds', 4500, '2023-12-14'),
+(912, 640932, 'Real Estate Investment Trust', 120000, '2023-08-10'),
+(134, 121384, 'Certificate of Deposit', 200000, '2023-06-21');
+
+INSERT INTO transaction (Transaction_Number, Client_ID, Employee_ID, Date, Amount, Asset_ID)
+VALUES
+(98, 276077, 68334, '2023-12-16', 1000, 234),
+(67, 683684, 68334, '2023-11-30', 500, 346),
+(45, 152833, 68334, '2023-12-10', 800, 568),
+(34, 169020, 68334, '2023-11-21', 2000, 345),
+(45, 842498, 68334, '2023-10-30', -100, 478),
+(14, 824023, 68334, '2023-11-15', 300, 235),
+(56, 531523, 68334, '2023-12-13', 12000, 689),
+(58, 727493, 68334, '2023-12-16', 3000, 674),
+(67, 640932, 68334, '2023-12-01', -10000, 912),
+(34, 121384, 68334, '2023-06-30', 50000, 134);
+
+INSERT INTO billingprocess (Billing_ID, Client_ID, Employee_ID, Transaction_Number)
+VALUES
+(862194, '276077', 68334, 98),
+(261951, '683684', 68334, 67),
+(374090, '152833', 68334, 45),
+(498673, '169020', 68334, 34),
+(866831, '842498', 68334, 45),
+(408840, '824023', 68334, 14),
+(159546, '531523', 68334, 56),
+(729640, '727493', 68334, 58),
+(304362, '640932', 68334, 67),
+(268150, '121384', 68334, 34);
+
+-----------------------------------------------------------------------------------------------------------------------
+#Python Script
+
+import mysql.connector
+from prettytable import PrettyTable
+from datetime import datetime
+
+# Connect to the MySQL server
+conn = mysql.connector.connect(
+    user="root",
+    password="enter_your_password_here",
+    database="willson_financial_project"
+)
+
+# Create cursor object
+cursor = conn.cursor()
+
+# Function to get current date/time in a readable format
+def get_current_datetime():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+# Report 1: Monthly Client Additions
+report1_query = """
+    SELECT 
+        DATE_FORMAT(JoinedDate, '%M %Y') AS Month,
+        COUNT(DISTINCT Client_ID) AS 'New Clients'
+    FROM Client
+    WHERE JoinedDate >= CURDATE() - INTERVAL 6 MONTH
+    GROUP BY Month
+    ORDER BY MIN(JoinedDate) DESC;
+"""
+
+# Report 2: Average Amount of Assets per Client
+report2_query = """
+    SELECT 
+        GROUP_CONCAT(CONCAT(Client.FirstName, ' ', Client.LastName)) AS 'Client Name',
+        SUM(Asset.Value) AS 'Total Asset Value in USD'
+    FROM Client
+    LEFT JOIN Asset ON Client.Client_ID = Asset.Client_ID
+    GROUP BY Client.Client_ID
+    ORDER BY SUM(Asset.Value) DESC;
+"""
+-----------------------------------------------------------------------------------------------------------------------
+#Retreive Data from SQL
+
+# Report 3: Gather the amount of transactions per client in an entire month
+
+SELECT CONCAT('--', CURDATE(), '--' AS 'Date of Report',
+	client_id, COUNT(*) AS TransactionsInOneMonth
+	FROM Transaction
+	GROUP BY client_id, YEAR(date), MONTH (date)
+	HAVING COUNT (*) > 10
+	ORDER BY TransactionsInOneMonth DESC;
+
+-----------------------------------------------------------------------------------------------------------------------
+
+# Execute the queries and display results using PrettyTable
+for report_query in [report1_query, report2_query]:
+    cursor.execute(report_query)
+    result = cursor.fetchall()
+
+    table = PrettyTable()
+    table.field_names = [desc[0] for desc in cursor.description]
+    table.add_rows(result)
+
+    print(f"\nReport executed at: {get_current_datetime()}")
+    print(table)
+
+    if report_query == report2_query:
+        # Calculate and print the average assets for total clients after Report 2
+        total_value = sum(row[1] for row in result)  # Update index to match the new column name
+        total_clients = len(result)
+        average_assets_for_total_clients = total_value / total_clients
+
+        print(f"\nAverage Assets for Total Clients: {average_assets_for_total_clients}")
+
+# Close the cursor and connection
+cursor.close()
+conn.close()
